@@ -3,6 +3,9 @@
 
 //用户调用函数：
 void LCD_Init();
+int LCD_Pow(int X,int Y);
+void LCD_SetCursor(unsigned char Line,unsigned char Column);
+void LCD_WriteData(unsigned char Data);
 void LCD_ShowChar(unsigned char Line,unsigned char Column,char Char);
 void LCD_ShowString(unsigned char Line,unsigned char Column,char *String);
 void LCD_ShowNum(unsigned char Line,unsigned char Column,unsigned int Number,unsigned char Length);

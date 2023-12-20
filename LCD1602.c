@@ -149,6 +149,7 @@ void LCD_ShowNum(unsigned char Line,unsigned char Column,unsigned int Number,uns
 	}
 }
 
+
 /**
   * @brief  在LCD1602指定位置开始以有符号十进制显示所给数字
   * @param  Line 起始行位置，范围：1~2

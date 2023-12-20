@@ -1,10 +1,10 @@
-C51 COMPILER V9.60.7.0   MAIN                                                              12/20/2023 16:28:20 PAGE 1   
+C51 COMPILER V9.57.0.0   MAIN                                                              12/20/2023 21:48:10 PAGE 1   
 
 
-C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
+C51 COMPILER V9.57.0.0, COMPILATION OF MODULE MAIN
 OBJECT MODULE PLACED IN .\Objects\main.obj
-COMPILER INVOKED BY: D:\DevPrograms\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\L
-                    -istings\main.lst) OBJECT(.\Objects\main.obj)
+COMPILER INVOKED BY: D:\Programs\Keil\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listing
+                    -s\main.lst) OBJECT(.\Objects\main.obj)
 
 line level    source
 
@@ -12,58 +12,128 @@ line level    source
    2          #include"LCD1602.h"
    3          #include"Delay.h"
    4          #include"Key.h"
-   5          void Timer0_Init(){
-   6   1              TMOD = 0x01;
-   7   1              TF0 = 0;
-   8   1              TR0 = 1;
-   9   1              TH0 = 64536/256;
-  10   1              TL0 = 64536%256;
-  11   1              ET0 = 1;
-  12   1              EA = 1;
-  13   1              PT0 = 0;
-  14   1      }
-  15          int i = 0;
+   5          
+   6          void Timer0_Init(){
+   7   1              TMOD = 0x01;
+   8   1              TF0 = 0;
+   9   1              TR0 = 1;
+  10   1              TH0 = 64536/256;
+  11   1              TL0 = 64536%256;
+  12   1              ET0 = 1;
+  13   1              EA = 1;
+  14   1              PT0 = 0;
+  15   1      }
   16          
-  17          void main(){
-  18   1              LCD_Init();
-  19   1              // LCD_ShowChar(1, 1, 'A');
-  20   1              // LCD_ShowString(1, 1, "Day shift mode");
-  21   1              // LCD_ShowString(1, 1, "Night shift mode");
-  22   1              Timer0_Init();
-  23   1              LCD_ShowString(2, 1, "Go!  ");
-  24   1              //while(1){}
-  25   1              while(1){
-  26   2                      Delay(1000);
-  27   2                      i += 1;
-  28   2                      LCD_ShowNum(1, 1, i, 3);
-  29   2              }
-  30   1      }
-  31          
-  32          unsigned int T0Count;
-  33          void Timer0_Routine() interrupt 1{
-  34   1              TH0 = 64536/256;
-  35   1              TL0 = 64536%256;
-  36   1              T0Count ++;
-  37   1              if (T0Count >= 3000){
-  38   2                      T0Count = 0;
-  39   2                      LCD_ShowString(2, 1, "STOP!");
-  40   2                      Delay(3000);
-  41   2                      LCD_ShowString(2, 1, "Go!  ");
-  42   2              }
-  43   1      }
+  17          int countDigits(int num) {  
+  18   1          int count = 0;  
+  19   1          while (num != 0) {  
+  20   2              count++;  
+  21   2              num /= 10;  
+  22   2          }  
+  23   1          return count;  
+  24   1      }  
+  25          
+  26          void LCD_WriteDecimal(unsigned char Line,unsigned char Column, double num){
+  27   1              
+  28   1              int integerPart = (int)(num);
+  29   1              double decimalPart = num - integerPart;  
+  30   1              int len = countDigits(integerPart);
+  31   1              unsigned char i;
+  32   1              int j = 2;                              //      价格保留两位小数
+  33   1              LCD_SetCursor(Line,Column);
+  34   1              
+  35   1              // 打印整数段
+  36   1              for(i = len;i>0;i--){
+  37   2                      LCD_WriteData(integerPart/LCD_Pow(10,i-1)%10+'0');
+  38   2              }
+  39   1              
+  40   1              // 打印小数点
+  41   1              LCD_WriteData('.');     
+  42   1              
+  43   1              // 打印小数段
+  44   1              while(j > 0){
+  45   2                      int digit = (int)(decimalPart * 10);
+  46   2                      LCD_WriteData(digit+'0');
+  47   2                      decimalPart = decimalPart*10 - digit;  
+  48   2                      j-- ;
+  49   2              }
+  50   1      }
+  51          
+  52          
+  53          
+  54          int i = 0;
+C51 COMPILER V9.57.0.0   MAIN                                                              12/20/2023 21:48:10 PAGE 2   
+
+  55          double price;
+  56          int flag = 1;   // 1为白班模式,0为夜班模式.
+  57          int run = 1;    // 1为行驶状态,0为停滞状态
+  58          int begun = 0;  // 1为已经启动，此时按K2按键不会增加起步费，0为还未启动，此时按
+             -K2按键会增加起步费。
+  59          int keyNum;
+  60          
+  61          void main(){
+  62   1              Timer0_Init();
+  63   1              LCD_Init();
+  64   1              LCD_ShowString(1, 1, "Day");            // 默认为白班模式
+  65   1              
+  66   1              while(1){
+  67   2                      keyNum = Key();
+  68   2                      if (keyNum == 1){                       // 切换黑/白班模式
+  69   3                              flag = 1 - flag;
+  70   3                              if(flag){
+  71   4                                      LCD_ShowString(1, 1, "Day  ");
+  72   4                              } else {
+  73   4                                      LCD_ShowString(1, 1, "Night");
+  74   4                              }
+  75   3                      }else if (keyNum == 2){         // 开始计费、启动
+  76   3                              if(begun == 0){
+  77   4                                      if (flag){
+  78   5                                              price += 10.0;
+  79   5                                      } else {
+  80   5                                              price += 11.0;
+  81   5                                      }
+  82   4                                      LCD_ShowString(1, 10, "run ");
+  83   4                              }
+  84   3                              begun = 1;
+  85   3                      }else if (keyNum == 3){         // 切换行驶/停滞状态
+  86   3                              run = 1 - run;
+  87   3                              if (run){
+  88   4                                      LCD_ShowString(1, 10, "run ");
+  89   4                              } else {
+  90   4                                      LCD_ShowString(1, 10, "stop");
+  91   4                              }
+  92   3                      }else if (keyNum == 4){         // 停止计费
+  93   3                              LCD_ShowString(1, 1, "Price: ");
+  94   3                              LCD_ShowString(1, 10, "    ");
+  95   3                              LCD_WriteDecimal(1, 8, price);
+  96   3                      }
+  97   2                      
+  98   2      
+  99   2              }
+ 100   1      }
+ 101          
+ 102          
+ 103          unsigned int T0Count;
+ 104          void Timer0_Routine() interrupt 1{
+ 105   1              TH0 = 64536/256;
+ 106   1              TL0 = 64536%256;
+ 107   1              T0Count ++;
+ 108   1      
+ 109   1      }
+ 110          
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    187    ----
-   CONSTANT SIZE    =     12    ----
+   CODE SIZE        =    561    ----
+   CONSTANT SIZE    =     39    ----
+C51 COMPILER V9.57.0.0   MAIN                                                              12/20/2023 21:48:10 PAGE 3   
+
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
-   DATA SIZE        =      4    ----
+   DATA SIZE        =     16      19
    IDATA SIZE       =   ----    ----
    BIT SIZE         =   ----    ----
 END OF MODULE INFORMATION.
-
-C51 COMPILER V9.60.7.0   MAIN                                                              12/20/2023 16:28:20 PAGE 2   
 
 
 C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
