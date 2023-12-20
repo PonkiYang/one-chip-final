@@ -222,3 +222,37 @@ void LCD_ShowBinNum(unsigned char Line,unsigned char Column,unsigned int Number,
 		LCD_WriteData(Number/LCD_Pow(2,i-1)%2+'0');
 	}
 }
+
+int countDigits(int num) {  
+    int count = 0;  
+    while (num != 0) {  
+        count++;  
+        num /= 10;  
+    }  
+    return count;  
+}  
+
+void LCD_WriteDecimal(unsigned char Line,unsigned char Column, double num){
+	int integerPart = (int)(num);
+	double decimalPart = num - integerPart;  
+	int len = countDigits(integerPart);
+	unsigned char i;
+	int j = 2;				// 	价格保留两位小数
+	LCD_SetCursor(Line,Column);
+	
+	// 打印整数段
+	for(i = len;i>0;i--){
+		LCD_WriteData(integerPart/LCD_Pow(10,i-1)%10+'0');
+	}
+	
+	// 打印小数点
+	LCD_WriteData('.');	
+	
+	// 打印小数段
+	while(j > 0){
+		int digit = (int)(decimalPart * 10);
+		LCD_WriteData(digit+'0');
+		decimalPart = decimalPart*10 - digit;  
+		j-- ;
+	}
+}

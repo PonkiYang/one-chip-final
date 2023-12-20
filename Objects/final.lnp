@@ -1,7 +1,8 @@
 ".\Objects\main.obj",
 ".\Objects\LCD1602.obj",
 ".\Objects\Delay.obj",
-".\Objects\Key.obj" 
+".\Objects\Key.obj",
+".\Objects\Timer.obj" 
 TO ".\Objects\final" 
 PRINT(".\Listings\final.m51") RAMSIZE(256) 
 DISABLEWARNING (16) 

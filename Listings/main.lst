@@ -1,136 +1,165 @@
-C51 COMPILER V9.57.0.0   MAIN                                                              12/20/2023 21:48:10 PAGE 1   
+C51 COMPILER V9.60.7.0   MAIN                                                              12/21/2023 02:04:33 PAGE 1   
 
 
-C51 COMPILER V9.57.0.0, COMPILATION OF MODULE MAIN
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
 OBJECT MODULE PLACED IN .\Objects\main.obj
-COMPILER INVOKED BY: D:\Programs\Keil\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listing
-                    -s\main.lst) OBJECT(.\Objects\main.obj)
+COMPILER INVOKED BY: D:\DevPrograms\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\L
+                    -istings\main.lst) OBJECT(.\Objects\main.obj)
 
 line level    source
 
-   1          #include<regx52.h>
-   2          #include"LCD1602.h"
-   3          #include"Delay.h"
-   4          #include"Key.h"
+   1          #include <regx52.h>
+   2          #include "LCD1602.h"
+   3          #include "Key.h"
+   4          #include "Timer.h"
    5          
-   6          void Timer0_Init(){
-   7   1              TMOD = 0x01;
-   8   1              TF0 = 0;
-   9   1              TR0 = 1;
-  10   1              TH0 = 64536/256;
-  11   1              TL0 = 64536%256;
-  12   1              ET0 = 1;
-  13   1              EA = 1;
-  14   1              PT0 = 0;
-  15   1      }
-  16          
-  17          int countDigits(int num) {  
-  18   1          int count = 0;  
-  19   1          while (num != 0) {  
-  20   2              count++;  
-  21   2              num /= 10;  
-  22   2          }  
-  23   1          return count;  
-  24   1      }  
-  25          
-  26          void LCD_WriteDecimal(unsigned char Line,unsigned char Column, double num){
-  27   1              
-  28   1              int integerPart = (int)(num);
-  29   1              double decimalPart = num - integerPart;  
-  30   1              int len = countDigits(integerPart);
-  31   1              unsigned char i;
-  32   1              int j = 2;                              //      价格保留两位小数
-  33   1              LCD_SetCursor(Line,Column);
-  34   1              
-  35   1              // 打印整数段
-  36   1              for(i = len;i>0;i--){
-  37   2                      LCD_WriteData(integerPart/LCD_Pow(10,i-1)%10+'0');
-  38   2              }
-  39   1              
-  40   1              // 打印小数点
-  41   1              LCD_WriteData('.');     
-  42   1              
-  43   1              // 打印小数段
-  44   1              while(j > 0){
-  45   2                      int digit = (int)(decimalPart * 10);
-  46   2                      LCD_WriteData(digit+'0');
-  47   2                      decimalPart = decimalPart*10 - digit;  
-  48   2                      j-- ;
-  49   2              }
-  50   1      }
-  51          
-  52          
-  53          
-  54          int i = 0;
-C51 COMPILER V9.57.0.0   MAIN                                                              12/20/2023 21:48:10 PAGE 2   
+   6          int i = 0;
+   7          double price;
+   8          int flag = 1;                                                   // 1为白班模式,0为夜班模式.
+   9          int run = 1;                                                    // 1为行驶状态,0为停滞状态
+  10          int begun = 0;                                                  // 1为已经启动，此时按K2按键不会增加起步费，0为还未启动，此
+             -时按K2按键会增加起步费。
+  11          int keyNum;                                                             // 按键代数
+  12          int dist = 0;                                                   // 路程
+  13          char Hour = 0, Sec = 0, Min = 0;                // 等待时间
+  14          int Mins = 0;                                                   // 总等待时间（单位为分钟）
+  15          unsigned int runSec = 0, runMin = 0;    // 行驶时间（单位为分钟）
+  16          char s10 = 0;                                                   // 表示10秒过没过，为0则没过，为1则过了，用于while(1){}中最后一
+             -个判断
+  17          
+  18          void main(){
+  19   1              LCD_Init();
+  20   1              Timer0Init();                                   // 定时器0计算等待时间
+  21   1              Timer1Init();                                   // 定时器1计算行驶时间
+  22   1              LCD_ShowString(1, 1, "Day");    // 默认为白班模式
+  23   1              LCD_ShowString(2, 5,"km");
+  24   1              LCD_ShowString(2, 11,":  :  ");
+  25   1              while(1){
+  26   2                      // 显示路程
+  27   2                      LCD_ShowNum(2, 1, dist, 4);
+  28   2                      // 显示等待时间
+  29   2                      LCD_ShowNum(2, 9, Hour,2);
+  30   2                      LCD_ShowNum(2, 12, Min, 2);
+  31   2                      LCD_ShowNum(2, 15, Sec, 2);
+  32   2                      keyNum = Key();
+  33   2                      if (keyNum == 1){                       // 切换黑/白班模式
+  34   3                              flag = 1 - flag;
+  35   3                              if(flag){
+  36   4                                      LCD_ShowString(1, 1, "Day  ");
+  37   4                              } else {
+  38   4                                      LCD_ShowString(1, 1, "Night");
+  39   4                              }
+  40   3                      }else if (keyNum == 2){         // 开始计费、启动
+  41   3                              if(begun == 0){
+  42   4                                      if (flag){
+  43   5                                              price += 10.0;
+  44   5                                      } else {
+  45   5                                              price += 11.0;
+  46   5                                      }
+  47   4                                      LCD_ShowString(1, 9, "stop");
+  48   4                              }
+  49   3                              begun = 1;
+  50   3                              TR0 = 1;                                // 打开定时器0,计算等待时间
+  51   3                              
+  52   3      
+C51 COMPILER V9.60.7.0   MAIN                                                              12/21/2023 02:04:33 PAGE 2   
 
-  55          double price;
-  56          int flag = 1;   // 1为白班模式,0为夜班模式.
-  57          int run = 1;    // 1为行驶状态,0为停滞状态
-  58          int begun = 0;  // 1为已经启动，此时按K2按键不会增加起步费，0为还未启动，此时按
-             -K2按键会增加起步费。
-  59          int keyNum;
-  60          
-  61          void main(){
-  62   1              Timer0_Init();
-  63   1              LCD_Init();
-  64   1              LCD_ShowString(1, 1, "Day");            // 默认为白班模式
-  65   1              
-  66   1              while(1){
-  67   2                      keyNum = Key();
-  68   2                      if (keyNum == 1){                       // 切换黑/白班模式
-  69   3                              flag = 1 - flag;
-  70   3                              if(flag){
-  71   4                                      LCD_ShowString(1, 1, "Day  ");
-  72   4                              } else {
-  73   4                                      LCD_ShowString(1, 1, "Night");
-  74   4                              }
-  75   3                      }else if (keyNum == 2){         // 开始计费、启动
-  76   3                              if(begun == 0){
-  77   4                                      if (flag){
-  78   5                                              price += 10.0;
-  79   5                                      } else {
-  80   5                                              price += 11.0;
-  81   5                                      }
-  82   4                                      LCD_ShowString(1, 10, "run ");
-  83   4                              }
-  84   3                              begun = 1;
-  85   3                      }else if (keyNum == 3){         // 切换行驶/停滞状态
-  86   3                              run = 1 - run;
-  87   3                              if (run){
-  88   4                                      LCD_ShowString(1, 10, "run ");
-  89   4                              } else {
-  90   4                                      LCD_ShowString(1, 10, "stop");
-  91   4                              }
-  92   3                      }else if (keyNum == 4){         // 停止计费
-  93   3                              LCD_ShowString(1, 1, "Price: ");
-  94   3                              LCD_ShowString(1, 10, "    ");
-  95   3                              LCD_WriteDecimal(1, 8, price);
-  96   3                      }
-  97   2                      
-  98   2      
-  99   2              }
- 100   1      }
- 101          
- 102          
- 103          unsigned int T0Count;
- 104          void Timer0_Routine() interrupt 1{
- 105   1              TH0 = 64536/256;
- 106   1              TL0 = 64536%256;
- 107   1              T0Count ++;
- 108   1      
- 109   1      }
- 110          
+  53   3                      }else if (keyNum == 3){         // 切换行驶/停滞状态
+  54   3                              run = 1 - run;
+  55   3                              if(TR0 == 0){
+  56   4                                      TR0 = 1;
+  57   4                                      TR1 = 0;
+  58   4                              } else {
+  59   4                                      TR0 = 0;
+  60   4                                      TR1 = 1;
+  61   4                              }
+  62   3                              if (run){
+  63   4                                      LCD_ShowString(1, 9, "run ");
+  64   4                              } else {
+  65   4                                      LCD_ShowString(1, 9, "stop");
+  66   4                              }
+  67   3                      }else if (keyNum == 4){         // 停止计费
+  68   3                              LCD_ShowString(1, 1, "Price: ");
+  69   3                              LCD_ShowString(1, 10, "    ");
+  70   3                              LCD_WriteDecimal(1, 9, price);
+  71   3                      }
+  72   2                      if(Sec == 10 && s10 == 0){      // 计时开始十秒内为等待时间，10秒时切换状态;   与上后�
+             -�的判断的意义是：如果只有前面的判断，那么TR1开启的情况下，Sec永远不变，永远是10，那
+             -么按键K3失去意义
+  73   3                              s10 = 1;                                // 因为，每次按完K3切换完模式后，运行到这里又会切换回去
+  74   3                              TR0 = 0;                                // 关闭定时器0
+  75   3                              TR1 = 1;                                // 打开定时器1
+  76   3                              LCD_ShowString(1, 9, "run ");
+  77   3                      }
+  78   2              }
+  79   1      }
+  80          
+  81          
+  82          
+  83          void Timer0_Routine() interrupt 1{
+  84   1              static unsigned int T0Count;
+  85   1              TL0 = 0x66;             //设置定时初值
+  86   1              TH0 = 0xFC;             //设置定时初值
+  87   1              T0Count++;
+  88   1              if(T0Count>=1000)       //定时器分频，1s
+  89   1              {
+  90   2                      T0Count=0;
+  91   2                      Sec++;                  //1秒到，Sec自增
+  92   2                      if(Sec>=60)
+  93   2                      {
+  94   3                              Sec=0;          //60秒到，Sec清0，Min自增
+  95   3                              Min++;
+  96   3                              if(flag){
+  97   4                                      price += 2.0;           // 白班等待1分钟2块钱
+  98   4                              } else {
+  99   4                                      price += 2.5;   // 夜班等待1分钟2.5块钱
+ 100   4                              }
+ 101   3                              if(Min>=60)
+ 102   3                              {
+ 103   4                                      Min=0;  //60分钟到，Min清0，Hour自增
+ 104   4                                      Hour++;
+ 105   4                                      if(Hour>=24)
+ 106   4                                      {
+ 107   5                                              Hour=0; //24小时到，Hour清0
+ 108   5                                      }
+ 109   4                              }
+ 110   3                      }
+ 111   2              }
+ 112   1              
+C51 COMPILER V9.60.7.0   MAIN                                                              12/21/2023 02:04:33 PAGE 3   
+
+ 113   1      }
+ 114          
+ 115          void Timer1_Routine() interrupt 3{
+ 116   1              static unsigned int T1Count;
+ 117   1              TL1 = 0x66;             //设置定时初值
+ 118   1              TH1 = 0xFC;             //设置定时初值
+ 119   1              T1Count++;
+ 120   1              if(T1Count>=1000)       //定时器分频，1s
+ 121   1              {
+ 122   2                      T1Count=0;
+ 123   2                      runSec++;                       //1秒到，runSec自增
+ 124   2                      if(runSec>=60)
+ 125   2                      {
+ 126   3                              runSec=0;                       // 60秒到，runSec清0，runMin自增
+ 127   3                              runMin++;                       // 60秒->1分钟，单纯放在这，看得更明白些
+ 128   3                              dist ++;                        // 1分钟->1公里（1小时60公里）
+ 129   3                              if(flag){
+ 130   4                                      price += 2.0;           // 白班1公里2块钱
+ 131   4                              } else {
+ 132   4                                      price += 2.5;   // 夜班1公里2.5块钱
+ 133   4                              }
+ 134   3                      }
+ 135   2              }
+ 136   1      }
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    561    ----
-   CONSTANT SIZE    =     39    ----
-C51 COMPILER V9.57.0.0   MAIN                                                              12/20/2023 21:48:10 PAGE 3   
-
+   CODE SIZE        =    712    ----
+   CONSTANT SIZE    =     49    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
-   DATA SIZE        =     16      19
+   DATA SIZE        =     30    ----
    IDATA SIZE       =   ----    ----
    BIT SIZE         =   ----    ----
 END OF MODULE INFORMATION.

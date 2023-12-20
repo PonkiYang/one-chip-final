@@ -12,5 +12,6 @@ void LCD_ShowNum(unsigned char Line,unsigned char Column,unsigned int Number,uns
 void LCD_ShowSignedNum(unsigned char Line,unsigned char Column,int Number,unsigned char Length);
 void LCD_ShowHexNum(unsigned char Line,unsigned char Column,unsigned int Number,unsigned char Length);
 void LCD_ShowBinNum(unsigned char Line,unsigned char Column,unsigned int Number,unsigned char Length);
+void LCD_WriteDecimal(unsigned char Line,unsigned char Column, double num);
 
 #endif
